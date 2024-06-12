@@ -1,17 +1,10 @@
-/* eslint-disable prettier/prettier */
-// import * as cdk from "@aws-cdk/core";
-// import * as s3 from "@aws-cdk/aws-s3";
-// import * as s3Deployment from "@aws-cdk/aws-s3-deployment";
-// import * as cloudfront from "@aws-cdk/aws-cloudfront";
-// import * as origins from "@aws-cdk/aws-cloudfront-origins";
-// import * as iam from "@aws-cdk/aws-iam";
-
 import { Construct } from "constructs";
 import * as cdk from "aws-cdk-lib";
 import * as s3 from "aws-cdk-lib/aws-s3";
-import * as s3Deployment from "aws-cdk-lib/aws-s3-deployment";
+import * as s3Deploy from "aws-cdk-lib/aws-s3-deployment";
 import * as cloudfront from "aws-cdk-lib/aws-cloudfront";
 import * as origins from "aws-cdk-lib/aws-cloudfront-origins";
+import * as iam from "aws-cdk-lib/aws-iam";
 
 export class CdkTsStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -19,29 +12,37 @@ export class CdkTsStack extends cdk.Stack {
 
     // Create s3 bucket
     const myStoreBucket = new s3.Bucket(this, "MyStoreBucket", {
-      // bucketName: "cdk-my-store",
+      bucketName: "cdk-lgelashvili-my-store-app",
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
-      // autoDeleteObjects: true,
-      publicReadAccess: true,
-      websiteIndexDocument: "index.html",
-      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ACLS,
+      autoDeleteObjects: true,
     });
 
-    // Create CloudFront OAI
+    // Create an OAI to allow CloudFront to access the S3 bucket
     const originAccessIdentity = new cloudfront.OriginAccessIdentity(
       this,
       "OAI"
     );
 
-    // Grant CloudFront access to the S3 bucker
-    myStoreBucket.grantRead(originAccessIdentity);
+    // Grant CloudFront access to the S3 bucket
+    myStoreBucket.addToResourcePolicy(
+      new iam.PolicyStatement({
+        actions: ["s3:GetObject"],
+        resources: [myStoreBucket.arnForObjects("*")],
+        principals: [
+          new iam.CanonicalUserPrincipal(
+            originAccessIdentity.cloudFrontOriginAccessIdentityS3CanonicalUserId
+          ),
+        ],
+        effect: iam.Effect.ALLOW, // Allow access for the specified principal
+      })
+    );
 
     // Create CloudFront distribution
     const distribution = new cloudfront.Distribution(
       this,
       "MyStoreDistribution",
       {
-        defaultRootObject: "index.html",
         defaultBehavior: {
           origin: new origins.S3Origin(myStoreBucket, {
             originAccessIdentity: originAccessIdentity,
@@ -49,18 +50,27 @@ export class CdkTsStack extends cdk.Stack {
           viewerProtocolPolicy:
             cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
         },
+        defaultRootObject: "index.html",
       }
     );
 
     // Deploy to S3 bucket
-    new s3Deployment.BucketDeployment(this, "DeployMyStore", {
-      sources: [s3Deployment.Source.asset("../dist")],
+    const deployment = new s3Deploy.BucketDeployment(this, "DeployMyStore", {
+      sources: [s3Deploy.Source.asset("../dist")],
       destinationBucket: myStoreBucket,
       distribution: distribution,
       distributionPaths: ["/*"],
     });
 
-    // Output the CloudFront URL
+    // Invalidate cache in CloudFront after deployment
+    deployment.node.addDependency(distribution);
+
+    // Output the bucket website URL in Terminal
+    new cdk.CfnOutput(this, "BucketWebsiteURL", {
+      value: myStoreBucket.bucketWebsiteUrl,
+    });
+
+    // Output the CloudFront URL in Terminal
     new cdk.CfnOutput(this, "DistributionDomainName", {
       value: distribution.distributionDomainName,
     });

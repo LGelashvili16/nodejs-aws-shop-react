@@ -5,8 +5,8 @@
 [Manual deployment, S3 bucket HTML file](https://lgelashvili-rsschool-task2.s3.eu-north-1.amazonaws.com/index.html)  
 [Manual deployment, CloudFront HTML file](https://d1zlnygq0i2mpj.cloudfront.net)
 
-[CDK deployment, S3 bucket HTML file](https://lgelashvili-rsschool-task2.s3.eu-north-1.amazonaws.com/index.html)  
-[CDK deployment, CloudFront HTML file](https://d2y18gjo622zrv.cloudfront.net)
+[CDK deployment, S3 bucket HTML file](https://cdk-lgelashvili-my-store-app.s3.eu-west-1.amazonaws.com/index.html)  
+[CDK deployment, CloudFront HTML file](https://d3v16z9ovlpcoa.cloudfront.net)
 
 This is frontend starter project for nodejs-aws mentoring program. It uses the following technologies:
 
